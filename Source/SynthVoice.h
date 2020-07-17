@@ -44,6 +44,55 @@ public:
 
     //==========================================================================
 
+    static void addWaveTypeParameters(AudioProcessorValueTreeState::ParameterLayout& layout)
+    {
+        auto wavetype = std::make_unique<AudioParameterFloat>("waveType", "WaveType", NormalisableRange<float>(0.0f, 2.0f, 1), 0.0f);
+
+        layout.add(std::move(wavetype));
+    }
+
+    //==========================================================================
+
+    void getWaveType(float* waveType)
+    {
+        theWave = *waveType;
+    }
+
+    //==========================================================================
+
+    double setWaveType()
+    {
+        switch (theWave)
+        {
+        case 0: 
+            return osc1.sinewave(frequency);
+        case 1:
+            return osc1.saw(frequency);
+        case 2:
+            return osc1.square(frequency);
+        default:
+            return osc1.sinewave(frequency);
+        }
+    }
+
+    //==========================================================================
+
+    static void addGainParameters(AudioProcessorValueTreeState::ParameterLayout& layout)
+    {
+        auto gain = std::make_unique<AudioParameterFloat>("gain", "Gain", NormalisableRange<float>(-40.0f, 0.0f, 0.01f), -6.0f);
+
+        layout.add(std::move(gain));
+    }
+
+    //==========================================================================
+
+    void getGainValue(float* gainValue)
+    {
+        gain = *gainValue;
+    }
+
+    //==========================================================================
+
     bool canPlaySound(SynthesiserSound* sound)
     {
         return dynamic_cast<SynthSound*>(sound) != nullptr;
@@ -90,9 +139,7 @@ public:
     {
         for (int sample = 0; sample < numSamples; ++sample)
         {
-            double theWave = osc1.sinewave(frequency);
-            double theSound = env1.adsr(theWave, env1.trigger) * level;
-            double filteredSound = filter1.lores(theSound, 150, 0.1);
+            double theSound = (env1.adsr(setWaveType(), env1.trigger) * level) * juce::Decibels::decibelsToGain(gain);
 
             for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel)
             {
@@ -105,10 +152,12 @@ public:
 private:
     double level;
     double frequency;
+    double gain;
 
     maxiOsc osc1; 
     maxiEnv env1;
     maxiFilter filter1;
+    int theWave;
 };
 
 

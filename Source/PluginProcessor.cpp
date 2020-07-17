@@ -15,6 +15,8 @@ AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
 {
     AudioProcessorValueTreeState::ParameterLayout layout;
     SynthVoice::addADSRParameters (layout);
+    SynthVoice::addWaveTypeParameters(layout);
+    SynthVoice::addGainParameters(layout);
     return layout;
 }
 //==============================================================================
@@ -149,12 +151,15 @@ bool NewProjectAudioProcessor::isBusesLayoutSupported (const BusesLayout& layout
 
 void NewProjectAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    magicState.processMidiBuffer(midiMessages, buffer.getNumSamples());
     for (int i = 0; i < mySynth.getNumVoices(); i++)
     {
         if ((myVoice = dynamic_cast<SynthVoice*>(mySynth.getVoice(i))))
         {
             //sets adsr of each synthesiser voice after confirming that the voice is of type SynthVoice
             myVoice->setADSR((float *)treeState.getRawParameterValue("attack"), (float*)treeState.getRawParameterValue("decay"), (float*)treeState.getRawParameterValue("sustain"), (float*)treeState.getRawParameterValue("release"));
+            myVoice->getWaveType((float *)treeState.getRawParameterValue("waveType"));
+            myVoice->getGainValue((float*)treeState.getRawParameterValue("gain"));
         }
     }
     buffer.clear();
@@ -169,21 +174,20 @@ bool NewProjectAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* NewProjectAudioProcessor::createEditor()
 {
+    //when finished with all parameters replace commented line with current code to load gui xml data
+    //return new foleys::MagicPluginEditor(magicState, BinaryData::gui1, BinaryData::gui1Size);
     return new foleys::MagicPluginEditor(magicState);
 }
 
 //==============================================================================
 void NewProjectAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    magicState.getStateInformation(destData);
 }
 
 void NewProjectAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    magicState.setStateInformation(data, sizeInBytes);
 }
 
 //==============================================================================
